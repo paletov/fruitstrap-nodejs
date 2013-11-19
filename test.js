@@ -36,9 +36,12 @@ var ADNCI_MSG_DISCONNECTED = 2;
 var ADNCI_MSG_UNKNOWN = 3;
 
 var _device = null;
-var kCFRunLoopCommonModes = "";
+var kCFRunLoopCommonModes = coreFoundation.dll.get("kCFRunLoopCommonModes");
 
 function deviceNotification(info, user) {
+
+	console.log("in devicenotification");
+
 	 var info = info.contents
      if(info.msg == ADNCI_MSG_CONNECTED) {
        _device = info.dev;
@@ -65,28 +68,29 @@ var am_device_install_application_callback = ffi.Callback('void', ['uint', 'poin
 
 });
 
-var am_device_notification = Struct([
-		['uint32', 'unknown0'],
-		['uint32', 'unknown1'],
-		['uint32', 'unknown2'],
-		['pointer', 'callback'],
-		['uint32', 'unknown3']
-]);
+var am_device_notification = Struct({
+	unknown0: ref.types.uint32,
+	unknown1: ref.types.uint32,
+	unknown2: ref.types.uint32,
+	callback: ref.refType(ref.types.void),
+	cookie: ref.types.uint32
+});
 
-var am_device_notification_callback_info = Struct([
-	  // ['pointer', _device],
-   // 	  ['uint32', 0],
-   //    ['pointer', am_device_notification]
-]);
+var am_device_notification_callback_info = Struct({
+	  dev: ref.refType(ref.types.void),
+   	  msg: ref.types.uint,
+      subscription: ref.refType(am_device_notification),
+});
 
-function connect(self) {
-	var e = AMDeviceConnect(self._device);
+
+function connect() {
+	var e = AMDeviceConnect(_device);
 	if(e != 0)
 		throw e;
 }
 
 function waitForDevice(timeout) {
-	var e = AMDeviceNotificationSubscribe(am_device_notification_callback, 0, 0, 0, ref.alloc('void'));
+	var e = mobileDevice.AMDeviceNotificationSubscribe(am_device_notification_callback, 0, 0, 0, ref.address(ref.alloc("void")));
 	if(e != 0)
 		throw e;
 
@@ -102,11 +106,6 @@ function waitForDevice(timeout) {
 	}
 }
 
-function _transfer(self, dictionary, user) {
-	showStatus('Transfering', dictionary);
-}
-
-function showStatus(self, action, dictionary) {
-	console.log('in show method');
-}
+waitForDevice();
+connect();
 
