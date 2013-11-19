@@ -90,7 +90,9 @@ function connect() {
 }
 
 function waitForDevice(timeout) {
-	var e = mobileDevice.AMDeviceNotificationSubscribe(am_device_notification_callback, 0, 0, 0, ref.address(ref.alloc("void")));
+	
+	var notif = new am_device_notification();
+	var e = mobileDevice.AMDeviceNotificationSubscribe(am_device_notification_callback, 0, 0, 0, notif.ref());
 	if(e != 0)
 		throw e;
 
