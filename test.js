@@ -38,11 +38,10 @@ var ADNCI_MSG_UNKNOWN = 3;
 var _device = null;
 var kCFRunLoopCommonModes = coreFoundation.dll.get("kCFRunLoopCommonModes");
 
-function deviceNotification(info, user) {
+function deviceNotification(devInfo, user) {
 
-	console.log("in devicenotification");
+	 var info = ref.deref(devInfo);
 
-	 var info = info.contents
      if(info.msg == ADNCI_MSG_CONNECTED) {
        _device = info.dev;
        coreFoundation.CFRunLoopStop(coreFoundation.CFRunLoopGetCurrent());
@@ -62,11 +61,7 @@ function timer(timer, info) {
 	coreFoundation.CFRunLoopStop(coreFoundation.CFRunLoopGetCurrent());
 }
 
-var am_device_notification_callback = ffi.Callback('void', ['pointer', 'int'], deviceNotification);
-var cf_run_loop_timer_callback = ffi.Callback('void', ['pointer', 'pointer'], timer);
-var am_device_install_application_callback = ffi.Callback('void', ['uint', 'pointer', 'pointer'], function() {
-
-});
+var am_device_p = ref.refType(ref.types.void);
 
 var am_device_notification = Struct({
 	unknown0: ref.types.uint32,
@@ -77,20 +72,26 @@ var am_device_notification = Struct({
 });
 
 var am_device_notification_callback_info = Struct({
-	  dev: ref.refType(ref.types.void),
+	  dev: am_device_p,
    	  msg: ref.types.uint,
       subscription: ref.refType(am_device_notification),
 });
 
+var am_device_notification_callback = ffi.Callback('void', [ref.refType(am_device_notification_callback_info), 'int'], deviceNotification);
+var cf_run_loop_timer_callback = ffi.Callback('void', ['pointer', 'pointer'], timer);
+var am_device_install_application_callback = ffi.Callback('void', ['uint', 'pointer', 'pointer'], function() {
+
+});
+
 
 function connect() {
-	var e = AMDeviceConnect(_device);
+	var e = mobileDevice.AMDeviceConnect(_device);
 	if(e != 0)
 		throw e;
 }
 
 function waitForDevice(timeout) {
-	
+
 	var notif = new am_device_notification();
 	var e = mobileDevice.AMDeviceNotificationSubscribe(am_device_notification_callback, 0, 0, 0, notif.ref());
 	if(e != 0)
